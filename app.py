@@ -44,7 +44,11 @@ def predict():
 
     try:
         deeplabcut.analyze_videos(config_path, [video_path], save_as_csv=False)
-        labeled_video_path = video_path.replace('.mp4', '_labeled.mp4')
+
+        labeled_video_filename = video.filename.replace('.mp4', 'DLC_resnet50_blackDogJul15shuffle1_40000_filtered_labeled.MP4')
+        labeled_video_path = os.path.join('C:\\Users\\orvos\\flask\\uploads', labeled_video_filename)
+
+        deeplabcut.filterpredictions(config_path, [video_path], filtertype='median')
         deeplabcut.create_labeled_video(config_path, [video_path], filtered=True, draw_skeleton=True, save_frames=False, overwrite=True)
 
         if os.path.exists(labeled_video_path):
