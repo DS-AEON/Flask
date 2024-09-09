@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_file
 import os
 import deeplabcut
 from movement_analysis import calculate_movement_distances
+from movement_analysis import movement_0
 
 app = Flask(__name__)
 
@@ -36,7 +37,7 @@ def predict():
         return jsonify({"error": "No video file provided"}), 400
 
     video = request.files['video']
-    video_path = os.path.join('C:\\Users\\orvos\\flask\\uploads', video.filename)
+    video_path = os.path.join('C:\\Hadog\\uploads', video.filename)
     video.save(video_path)
 
     log_info(f"Received video file: {video.filename}")
@@ -46,7 +47,7 @@ def predict():
         deeplabcut.analyze_videos(config_path, [video_path], save_as_csv=False)
 
         labeled_video_filename = video.filename.replace('.mp4', 'DLC_resnet50_blackDogJul15shuffle1_40000_filtered_labeled.MP4')
-        labeled_video_path = os.path.join('C:\\Users\\orvos\\flask\\uploads', labeled_video_filename)
+        labeled_video_path = os.path.join('C:\\Hadog\\uploads', labeled_video_filename)
 
         deeplabcut.filterpredictions(config_path, [video_path], filtertype='median')
         deeplabcut.create_labeled_video(config_path, [video_path], filtered=True, draw_skeleton=True, save_frames=False, overwrite=True)
@@ -71,7 +72,7 @@ def get_logs():
 
 @app.route('/results/<filename>', methods=['GET'])
 def get_result_video(filename):
-    video_path = os.path.join('C:\\Users\\orvos\\flask\\uploads', filename)
+    video_path = os.path.join('C:\\Hadog\\uploads', filename)
     if os.path.exists(video_path):
         return send_file(video_path, as_attachment=True)
     else:
@@ -139,6 +140,26 @@ def get_ranking():
     ranked_list = [{"rank": i + 1, "name": name, "distance": distance} for i, (name, distance) in enumerate(name_segment_distances)]
 
     return jsonify({"ranking": ranked_list})
+
+#++++++++++++++++++++++
+# 감정 분석
+@app.route('/emotion', methods=['POST'])
+def analyze_emotion():
+    data = request.json
+    csv_path = data.get('csv_path')
+
+    if not csv_path or not os.path.exists(csv_path):
+        log_error("CSV file not found")
+        return jsonify({"error": "CSV file not found"}), 400
+
+    result = movement_0(csv_path)
+
+    try:
+        return jsonify({"result": result}), 200
+
+    except Exception as e:
+        log_error(f"Exception occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 def log_info(message):
     with open(log_file_path, 'a') as log_file:
