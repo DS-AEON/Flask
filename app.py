@@ -3,14 +3,17 @@ import os
 import deeplabcut
 from movement_analysis import calculate_movement_distances
 from movement_analysis import movement_0
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+
 
 # 학습된 모델의 config 파일 경로 설정
-config_path = 'C:/blackDog-yoon-2024-07-15-20240810T011325Z-001/blackDog-yoon-2024-07-15/config.yaml'
+config_path = 'C:\\blackDog-yoon-2024-07-15-20240810T011325Z-001\\blackDog-yoon-2024-07-15\\config.yaml'
 
 # 관절좌표 CSV 파일 경로
-csv_path = 'C:/blackDog-yoon-2024-07-15-20240810T011325Z-001/blackDog-yoon-2024-07-15/videos/4211036-hd_1280_720_25fpsDLC_resnet50_blackDogJul15shuffle1_40000.csv'
+csv_path = 'C:\\blackDog-yoon-2024-07-15-20240810T011325Z-001\\blackDog-yoon-2024-07-15\\videos\\4211036-hd_1280_720_25fpsDLC_resnet50_blackDogJul15shuffle1_40000.csv'
 
 # 로그 파일 경로
 log_file_path = 'server.log'
@@ -37,7 +40,7 @@ def predict():
         return jsonify({"error": "No video file provided"}), 400
 
     video = request.files['video']
-    video_path = os.path.join('C:\\Hadog\\uploads', video.filename)
+    video_path = os.path.join('C:\\coding\\Hadog\\uploads\\', video.filename)
     video.save(video_path)
 
     log_info(f"Received video file: {video.filename}")
@@ -47,7 +50,7 @@ def predict():
         deeplabcut.analyze_videos(config_path, [video_path], save_as_csv=False)
 
         labeled_video_filename = video.filename.replace('.mp4', 'DLC_resnet50_blackDogJul15shuffle1_40000_filtered_labeled.MP4')
-        labeled_video_path = os.path.join('C:\\Hadog\\uploads', labeled_video_filename)
+        labeled_video_path = os.path.join('C:\\coding\\Hadog\\uploads\\', labeled_video_filename)
 
         deeplabcut.filterpredictions(config_path, [video_path], filtertype='median')
         deeplabcut.create_labeled_video(config_path, [video_path], filtered=True, draw_skeleton=True, save_frames=False, overwrite=True)
@@ -72,7 +75,7 @@ def get_logs():
 
 @app.route('/results/<filename>', methods=['GET'])
 def get_result_video(filename):
-    video_path = os.path.join('C:\\Hadog\\uploads', filename)
+    video_path = os.path.join('C:\\coding\\Hadog\\uploads\\', filename)
     if os.path.exists(video_path):
         return send_file(video_path, as_attachment=True)
     else:
@@ -170,8 +173,8 @@ def log_error(message):
         log_file.write(f"ERROR: {message}\n")
 
 if __name__ == '__main__':
-    if not os.path.exists('uploads'):
-        os.makedirs('uploads')
+    if not os.path.exists('uploads\\'):
+        os.makedirs('uploads\\')
     if not os.path.exists(log_file_path):
         open(log_file_path, 'w').close()
     app.run(debug=True)
