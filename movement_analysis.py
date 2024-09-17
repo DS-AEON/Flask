@@ -32,20 +32,34 @@ def movement_0(csv_path):
     logging.basicConfig(level=logging.INFO)
     
     # CSV 파일 읽기
-    df = pd.read_csv(csv_path, skiprows=3)
+    df = pd.read_csv(csv_path, skiprows=1)
+
+    logging.info(f"CSV 열 이름: {df.columns}")
 
     # x와 y 좌표 추출
     def extract_coordinates(df):
         coordinates = {}
-        for column in df.columns:
-            if column.endswith('x') or column.endswith('y'):
-                bodypart = column.rsplit('_', 1)[0]
-                if bodypart not in coordinates:
-                    coordinates[bodypart] = {'x': [], 'y': []}
-                if column.endswith('x'):
-                    coordinates[bodypart]['x'].append(df[column].values)
-                elif column.endswith('y'):
-                    coordinates[bodypart]['y'].append(df[column].values)
+
+        # 열 이름을 3개씩 묶어서 'x', 'y', 'likelihood'를 추출
+        for i in range(1, len(df.columns), 3):  # 'x', 'y', 'likelihood'가 3개씩 묶여 있음
+            bodypart_x = df.columns[i]
+            bodypart_y = df.columns[i + 1]
+
+            try:
+                bodypart_name = df.columns[i].split('_')[1]  # 신체 부위 이름 추출
+            except IndexError:
+                bodypart_name = f"bodypart_{(i-1)//3}"
+
+            # 좌표 데이터를 float 형식으로 변환하고 NaN 값 제거
+            x_values = pd.to_numeric(df[bodypart_x], errors='coerce').dropna().values
+            y_values = pd.to_numeric(df[bodypart_y], errors='coerce').dropna().values
+
+            coordinates[bodypart_name] = {
+                'x': x_values,
+                'y': y_values,
+                'likelihood': pd.to_numeric(df[df.columns[i + 2]], errors='coerce').dropna().values
+            }
+            
         return coordinates
 
     # 좌표 데이터 추출
@@ -53,27 +67,26 @@ def movement_0(csv_path):
 
     # 좌표 데이터 로그 출력
     for bodyparts, coords in coordinates.items():
-        logging.info(f"{bodyparts} x 좌표: {np.concatenate(coords['x'])}")
-        logging.info(f"{bodyparts} y 좌표: {np.concatenate(coords['y'])}")
+        logging.info(f"{bodyparts} x 좌표: {coords['x']}")
+        logging.info(f"{bodyparts} y 좌표: {coords['y']}")
 
     # 움직임 계산 함수
     def calculate_movement(coordinates):
         movements = []
         for bodyparts, coords in coordinates.items():
-            x = np.concatenate(coords['x'])
-            y = np.concatenate(coords['y'])
-            logging.info(f"{bodyparts} x 결합 좌표: {x}")
-            logging.info(f"{bodyparts} y 결합 좌표: {y}")
+            x = coords['x']
+            y = coords['y']
+            logging.info(f"{bodyparts} x 좌표: {x}")
+            logging.info(f"{bodyparts} y 좌표: {y}")
 
-            logging.info(f"x: {x}, y: {y}")
-            
             for i in range(1, len(x)):
                 prev_x, prev_y = x[i - 1], y[i - 1]
                 curr_x, curr_y = x[i], y[i]
                 movement = np.sqrt(np.sum((curr_x - prev_x) ** 2 + (curr_y - prev_y) ** 2))
                 movements.append(movement)
+                
         logging.info(f"movements: {movements}")
-        return np.mean(movements)
+        return np.mean(movements) if movements else 0.0  # 빈 리스트일 경우 평균을 0.0으로 설정
 
     # 움직임 기준값 설정
     movement_threshold = 0.1
